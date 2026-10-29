@@ -1,6 +1,7 @@
 // src/routes/courseRoutes.js
 import { Router } from "express";
 import * as courseService from "../services/courseService.js";
+import { verifyToken } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
@@ -10,8 +11,9 @@ const asyncHandler = (fn) => (req, res, next) =>
 // GET /course -> semua kelas
 router.get(
   "/",
+  verifyToken,
   asyncHandler(async (req, res) => {
-    const courses = await courseService.getAllCourses();
+    const courses = await courseService.getAllCourses(req.query);
     res.json(courses);
   })
 );

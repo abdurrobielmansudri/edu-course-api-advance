@@ -17,15 +17,44 @@ const COLUMNS = [
   "duration_minutes",
 ];
 
+// Kolom yang boleh dipakai untuk sorting
+const SORTABLE = ["id", "title", "price", "total_modules", "duration_minutes"];
+
 // Ambil hanya kolom yang diizinkan dari body request
 export const pickColumns = (data) =>
   Object.fromEntries(
     Object.entries(data ?? {}).filter(([key]) => COLUMNS.includes(key))
   );
 
-// SELECT * FROM courses
-export const getAllCourses = async () => {
-  const [rows] = await pool.query(`SELECT * FROM ${TABLE}`);
+// SELECT * FROM courses [WHERE ...] [ORDER BY ...]
+export const getAllCourses = async ({ topic, search, sortBy, order } = {}) => {
+  const conditions = [];
+  const params = [];
+
+  // Filter: WHERE category_id = ?
+  if (topic) {
+    conditions.push("category_id = ?");
+    params.push(String(topic));
+  }
+
+  // Search: WHERE title LIKE ? OR description LIKE ?
+  if (search) {
+    conditions.push("(title LIKE ? OR description LIKE ?)");
+    params.push(`%${String(search)}%`, `%${String(search)}%`);
+  }
+
+  let sql = `SELECT * FROM ${TABLE}`;
+  if (conditions.length > 0) {
+    sql += ` WHERE ${conditions.join(" AND ")}`;
+  }
+
+  // Sort: ORDER BY kolom ASC/DESC (hanya kolom yang diizinkan)
+  if (sortBy && SORTABLE.includes(sortBy)) {
+    const direction = String(order).toLowerCase() === "desc" ? "DESC" : "ASC";
+    sql += ` ORDER BY ${sortBy} ${direction}`;
+  }
+
+  const [rows] = await pool.query(sql, params);
   return rows;
 };
 
